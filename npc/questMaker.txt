@@ -1,0 +1,142 @@
+//===== aleDsz Script ======================================
+//= QuestMaker
+//===== By: ==================================================
+//= aleDsz
+//===== Current Version: =====================================
+//= 1.0
+//===== Description: =========================================
+//= SQL quest maker script
+//===== Additional Comments: =================================
+//= 1.0 Initial script.
+//============================================================
+
+-	script	questMaker	-1,{
+
+	// Config
+	.@cost			  = 15000000;			  // Custo por evolução
+	.@questName$	= strnpcinfo(3);	// Nome do NPC
+	.@costType		= strnpcinfo(2);	// Identificação de custo
+
+	// SQL Init
+	query_sql("select reward, npc, cost from rro_npc where name = '" + .@questName$ + "'", .@rewardItem, .@name$, .@itemCost);
+
+	// Functions
+	function getNeccessaryItems;
+	function checkNeccessaryItems;
+	function deleteItems;
+
+	// Init Script
+	for(.@i = 0; .@i < getarraysize(.@rewardItem); .@i++)
+		.@menu$ += "~ ^000080" + getitemname(.@rewardItem[.@i]) + "^000000:";
+
+	.@menu$ += ":~ Nothing";
+
+	mes "[" + .@name$ + " Quest Maker]";
+	mes "Hello "+strcharinfo(0)+", what do you need?";
+
+	.@option = select(.@menu$) - 1;
+	
+	if (.@costType == 1)
+		.@cost *= (.@option + 1);
+	else
+		.@cost = .@itemCost[.@option];
+
+	if ((.@option == getarraysize(.@rewardItem) + 1) || (.@option == 255)) {
+		next;
+		mes "[" + .@name$ + " Quest Maker]";
+		mes "Ok, see ya!";
+		specialeffect2 435;
+		close;
+	} else {
+		explode(.@msg$, getNeccessaryItems(.@option, .@questName$), ":");
+
+		next;
+		mes "[" + .@name$ + " Quest Maker]";
+		mes "To make ^000080" + getitemname(.@rewardItem[.@option]) + "^000000, I will need these materials:";
+
+		for(.@i = 0; .@i < 8; .@i++)
+			mes .@msg$[.@i];
+
+		mes "Zeny: " + .@cost;
+		next;
+		mes "[" + .@name$ + " Quest Maker]";
+		mes "Do you want to do this item?";
+
+		if (select("~ ^000080Yes^000000:~ ^000080No^000000") == 2)
+			close;
+
+		if (checkNeccessaryItems(.@option, .@questName$, .@cost) == 0) {
+			next;
+			mes "[" + .@name$ + " Quest Maker]";
+			mes "You're missing something. Come back when you've gathered all the materials.";
+			specialeffect2 306;
+			close;
+		}
+
+		next;
+		specialeffect2 305;
+		deleteItems(.@option, .@questName$, .@cost);
+		getitem .@rewardItem[.@option],1;
+		close;
+	}
+
+	// Funcitions
+	function getNeccessaryItems {
+		.@quest = getarg(0);
+		.@npc$  = getarg(1);
+
+		query_sql("select item, amount from rro_quest where name = '" + .@npc$ + "' and quest = " + .@quest, .@item, .@amount);
+
+		.@req$ = "";
+
+		for(.@i = 0; .@i < getarraysize(.@item); .@i++)
+			.@req$ += "^000080" + .@amount[.@i] + "x " + getitemname(.@item[.@i]) + " [" + .@item[.@i] + "]^000000:";
+
+		return .@req$;
+	}
+
+	function checkNeccessaryItems {
+		.@quest = getarg(0);
+		.@npc$  = getarg(1);
+		.@cost  = getarg(2);
+		.@ret   = 1;
+
+		if (Zeny < .@cost)
+			.@ret = 0;
+
+		query_sql("select item, amount from rro_quest where name = '" + .@npc$ + "' and quest = " + .@quest, .@item, .@amount);
+
+		for(.@i = 0; .@i < getarraysize(.@item); .@i++) {
+			if (countitem(.@item[.@i]) < .@amount[.@i])
+				.@ret = 0;
+		}
+
+		return .@ret;
+	}
+
+	function deleteItems {
+		.@quest = getarg(0);
+		.@npc$  = getarg(1);
+		.@cost  = getarg(2);
+
+		query_sql("select item, amount from rro_quest where name = '" + .@npc$ + "' and quest = " + .@quest, .@item, .@amount);
+
+		for(.@i = 0; .@i < getarraysize(.@item); .@i++)
+			delitem .@item[.@i], .@amount[.@i];
+
+		set Zeny, Zeny - .@cost;
+
+		return;
+	}
+}
+
+//============================================================
+// Duplicates
+//============================================================
+prontera,147,171,6	duplicate(questMaker)	[Quest] Espada das Costas#1::BackSword	4_F_VALKYRIE2
+prontera,147,167,6	duplicate(questMaker)	[Quest] Valkyrie Sombrio#1::Valk	4_M_BOSSCAT
+prontera,143,171,6	duplicate(questMaker)	[Quest] Aura Fantasma#1::AuraLhz	4_M_NFDEADMAN
+prontera,139,171,6	duplicate(questMaker)	[Quest] Asura Helm#1::Asura	4_M_REDSWORD
+prontera,147,163,6	duplicate(questMaker)	[Quest] Asas#0::Asas	4_MAN_GALTUN
+prontera,143,163,6	duplicate(questMaker)	[Quest] Cachecol#1::Cachecol	4_M_HUMAN_01
+prontera,164,166,4	duplicate(questMaker)	[Quest] Galho Sangrento#0::Bloody	4_M_NFDEADMAN
